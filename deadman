@@ -67,7 +67,34 @@ RTT_SCALE = 10
 
 SSH_CONNECT_TIMEOUT = 3
 
-OSNAME = getoutput("uname -s")
+def get_osname():
+    ret = str('')
+
+    ostype  = os.uname()
+    uname_s = sys.platform
+    # Treat Cygwin as posix
+    # uname_s.replace('cygwin', 'posix', 1)
+
+    if ostype == 'nt':
+        if uname_s.lower().startswith('win'):
+            ret = uname_s
+    elif ostype == 'posix':
+        if any([
+          uname_s.lower().startswith('linux'),
+          uname_s.lower().startswith('darwin'),
+          uname_s.lower().startswith('freebsd'),
+        ]):
+            ret = uname_s
+        else:
+            ret = 'posix'
+    else:
+        # unknown, try legacy detection algorithm
+        ret = getoutput("uname -s")
+
+    assert len(ret) > 0, "Failed to detect OS name"
+    return ret
+
+OSNAME = get_osname()
 
 
 PING_SUCCESS      = 0
@@ -790,9 +817,11 @@ def pingcmd(osname, ipv):
     Timeout is controlled by asyncio.wait_for.
     As a result, there is no difference :0 I need cleanup.
     """
-    if (osname == "Linux" or
-        osname == "Darwin" or
-        osname == "FreeBSD"):
+    if any([
+        osname == "Linux",
+        osname == "Darwin",
+        osname == "FreeBSD",
+    ]):
         if ipv == 4: return ["ping", "-c", "1"]
         if ipv == 6:
             if which('ping6'): return ["ping6", "-c", "1"]
